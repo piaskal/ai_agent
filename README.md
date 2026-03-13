@@ -15,14 +15,14 @@ Prefer user secrets or environment variables so the API key does not live in sou
 
 ```powershell
 dotnet user-secrets set "OpenRouter:ApiKey" "<your-openrouter-api-key>" --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj
-dotnet user-secrets set "OpenRouter:Model" "openai/gpt-4o-mini" --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj
+dotnet user-secrets set "OpenRouter:Model" "stepfun/step-3.5-flash:free" --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj
 ```
 
 ### Option 2: environment variables
 
 ```powershell
 $env:OPENROUTER__APIKEY = "<your-openrouter-api-key>"
-$env:OPENROUTER__MODEL = "openai/gpt-4o-mini"
+$env:OPENROUTER__MODEL = "stepfun/step-3.5-flash:free"
 ```
 
 You can also edit [OpenRouterAgent.Console/appsettings.json](OpenRouterAgent.Console/appsettings.json) for non-secret defaults such as model, prompt, and temperature.
@@ -31,6 +31,12 @@ You can also edit [OpenRouterAgent.Console/appsettings.json](OpenRouterAgent.Con
 
 ```powershell
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj
+```
+
+Override model at runtime:
+
+```powershell
+dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --model "stepfun/step-3.5-flash:free"
 ```
 
 ## Commands

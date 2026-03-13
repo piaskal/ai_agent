@@ -10,6 +10,13 @@ try
 {
 	var builder = Host.CreateApplicationBuilder(args);
 	builder.Configuration.AddUserSecrets<Program>(optional: true);
+	builder.Configuration.AddCommandLine(
+		args,
+		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		{
+			["--model"] = "OpenRouter:Model",
+			["-m"] = "OpenRouter:Model"
+		});
 
 	builder.Services
 		.AddOptions<OpenRouterOptions>()
@@ -23,7 +30,7 @@ try
 		.ValidateOnStart();
 
 	builder.Services.AddHttpClient<IOpenRouterClient, OpenRouterClient>();
-	builder.Services.AddSingleton<IAgentToolRegistry, EmptyAgentToolRegistry>();
+	builder.Services.AddSingleton<IAgentToolRegistry, GetCurrentTimeToolRegistry>();
 	builder.Services.AddSingleton<ConversationState>();
 	builder.Services.AddSingleton<ConsoleAgent>();
 

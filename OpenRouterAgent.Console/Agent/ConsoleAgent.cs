@@ -69,10 +69,11 @@ public sealed class ConsoleAgent
 
                 try
                 {
-                    var reply = await GetAssistantReplyAsync(shutdown.Token);
+                    var result = await GetAssistantReplyAsync(shutdown.Token);
 
                     Console.WriteLine();
-                    Console.WriteLine($"agent> {reply}");
+                    Console.WriteLine($"agent> {result.Reply}");
+                    Console.WriteLine($"tokens> {result.TotalTokensConsumed}");
                     Console.WriteLine();
                 }
                 catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
@@ -101,10 +102,11 @@ public sealed class ConsoleAgent
         }
     }
 
-    private async Task<string> GetAssistantReplyAsync(CancellationToken cancellationToken)
+    private async Task<AssistantReplyResult> GetAssistantReplyAsync(CancellationToken cancellationToken)
     {
         const int maxToolRounds = 6;
         var tools = _toolRegistry.GetToolDefinitions();
+        var totalTokensConsumed = 0;
 
         for (var round = 0; round < maxToolRounds; round++)
         {
@@ -112,6 +114,8 @@ public sealed class ConsoleAgent
                 _conversationState.Messages,
                 tools,
                 cancellationToken);
+
+            totalTokensConsumed += completion.TotalTokens ?? 0;
 
             if (completion.ToolCalls.Count == 0)
             {
@@ -121,7 +125,7 @@ public sealed class ConsoleAgent
                 }
 
                 _conversationState.AddAssistantMessage(completion.Content);
-                return completion.Content;
+                return new AssistantReplyResult(completion.Content, totalTokensConsumed);
             }
 
             _conversationState.AddAssistantToolCallMessage(completion.ToolCalls, completion.Content);
@@ -135,6 +139,8 @@ public sealed class ConsoleAgent
 
         throw new InvalidOperationException("Exceeded the maximum tool-calling rounds.");
     }
+
+    private sealed record AssistantReplyResult(string Reply, int TotalTokensConsumed);
 
     private async Task<string> ExecuteToolCallSafelyAsync(ChatToolCall toolCall, CancellationToken cancellationToken)
     {
@@ -198,9 +204,9 @@ public sealed class ConsoleAgent
         }
     }
 
-    private static void PrintBanner()
+    private void PrintBanner()
     {
-        Console.WriteLine("OpenRouter Agent");
+        Console.WriteLine($"OpenRouter Agent {_options.AppName} - Model: {_options.Model}");
         Console.WriteLine("Type a prompt to chat.");
         Console.WriteLine("Commands: /help, /reset, /system <prompt>, /exit");
         Console.WriteLine();
