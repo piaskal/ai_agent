@@ -35,6 +35,11 @@ try
 		.ValidateOnStart();
 
 	builder.Services.AddHttpClient<IOpenRouterClient, OpenRouterClient>();
+	builder.Services.AddSingleton<IAgentTool, GetCurrentTimeTool>();
+	builder.Services.AddSingleton<IAgentTool, SumTwoNumbersTool>();
+	builder.Services.AddSingleton<IAgentTool, DistanceBetweenLocationsTool>();
+	builder.Services.AddSingleton<IAgentTool, GetSuspectsTool>();
+	builder.Services.AddSingleton<IAgentTool, GetSuspectLocationsTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();

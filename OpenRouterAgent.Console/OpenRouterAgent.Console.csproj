@@ -20,4 +20,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="data_files\*.*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
