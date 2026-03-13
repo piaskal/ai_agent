@@ -35,7 +35,7 @@ try
 		.ValidateOnStart();
 
 	builder.Services.AddHttpClient<IOpenRouterClient, OpenRouterClient>();
-	builder.Services.AddSingleton<IAgentToolRegistry, GetCurrentTimeToolRegistry>();
+	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
 
