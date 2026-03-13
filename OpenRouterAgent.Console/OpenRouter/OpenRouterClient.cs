@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace OpenRouterAgent.ConsoleApp.OpenRouter;
@@ -14,13 +15,21 @@ public sealed class OpenRouterClient : IOpenRouterClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    private static readonly JsonSerializerOptions LogSerializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        WriteIndented = true
+    };
+
     private readonly HttpClient _httpClient;
     private readonly OpenRouterOptions _options;
+    private readonly ILogger<OpenRouterClient> _logger;
 
-    public OpenRouterClient(HttpClient httpClient, IOptions<OpenRouterOptions> options)
+    public OpenRouterClient(HttpClient httpClient, IOptions<OpenRouterOptions> options, ILogger<OpenRouterClient> logger)
     {
         _httpClient = httpClient;
         _options = options.Value;
+        _logger = logger;
 
         _httpClient.BaseAddress = new Uri(_options.BaseUrl);
         _httpClient.DefaultRequestHeaders.Accept.Clear();
@@ -54,6 +63,12 @@ public sealed class OpenRouterClient : IOpenRouterClient
             useTools ? tools : null,
             useTools ? "auto" : null);
 
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("OpenRouter request:\n{RequestJson}",
+                JsonSerializer.Serialize(request, LogSerializerOptions));
+        }
+
         using var response = await _httpClient.PostAsJsonAsync(
             "api/v1/chat/completions",
             request,
@@ -61,6 +76,12 @@ public sealed class OpenRouterClient : IOpenRouterClient
             cancellationToken);
 
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("OpenRouter response:\n{ResponseJson}",
+                FormatJson(responseBody));
+        }
 
         if (!response.IsSuccessStatusCode)
         {
@@ -163,5 +184,18 @@ public sealed class OpenRouterClient : IOpenRouterClient
 
         var text = builder.ToString().Trim();
         return text.Length == 0 ? null : text;
+    }
+
+    private static string FormatJson(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return JsonSerializer.Serialize(doc.RootElement, LogSerializerOptions);
+        }
+        catch
+        {
+            return json;
+        }
     }
 }
