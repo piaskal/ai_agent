@@ -1,29 +1,23 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OpenRouterAgent.ConsoleApp.Agent.Tools;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 
 namespace OpenRouterAgent.ConsoleApp.Agent;
 
 public sealed class ConsoleAgent
 {
-    private readonly ConversationState _conversationState;
-    private readonly IOpenRouterClient _openRouterClient;
-    private readonly IAgentToolRegistry _toolRegistry;
+    private readonly AgentService _agentService;
     private readonly OpenRouterOptions _options;
     private readonly ILogger<ConsoleAgent> _logger;
 
+    private const string ConsoleSessionId = "console";
+
     public ConsoleAgent(
-        ConversationState conversationState,
-        IOpenRouterClient openRouterClient,
-        IAgentToolRegistry toolRegistry,
+        AgentService agentService,
         IOptions<OpenRouterOptions> options,
         ILogger<ConsoleAgent> logger)
     {
-        _conversationState = conversationState;
-        _openRouterClient = openRouterClient;
-        _toolRegistry = toolRegistry;
+        _agentService = agentService;
         _options = options.Value;
         _logger = logger;
     }
@@ -36,7 +30,7 @@ public sealed class ConsoleAgent
 
         try
         {
-            _conversationState.Reset(_options.SystemPrompt);
+            _agentService.ResetSession(ConsoleSessionId);
             PrintBanner();
 
             while (!shutdown.IsCancellationRequested)
@@ -65,15 +59,13 @@ public sealed class ConsoleAgent
                     continue;
                 }
 
-                _conversationState.AddUserMessage(input);
-
                 try
                 {
-                    var result = await GetAssistantReplyAsync(shutdown.Token);
+                    var reply = await _agentService.ChatAsync(ConsoleSessionId, input, shutdown.Token);
 
                     Console.WriteLine();
-                    Console.WriteLine($"agent> {result.Reply}");
-                    Console.WriteLine($"tokens> {result.TotalTokensConsumed}");
+                    Console.WriteLine($"agent> {reply.Reply}");
+                    Console.WriteLine($"tokens> {reply.TotalTokensConsumed}");
                     Console.WriteLine();
                 }
                 catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
@@ -86,7 +78,6 @@ public sealed class ConsoleAgent
                     Console.WriteLine();
                     Console.WriteLine($"error> {exception.Message}");
                     Console.WriteLine();
-                    _conversationState.RemoveLastUserMessage();
                 }
             }
         }
@@ -99,65 +90,6 @@ public sealed class ConsoleAgent
         {
             eventArgs.Cancel = true;
             shutdown.Cancel();
-        }
-    }
-
-    private async Task<AssistantReplyResult> GetAssistantReplyAsync(CancellationToken cancellationToken)
-    {
-        const int maxToolRounds = 6;
-        var tools = _toolRegistry.GetToolDefinitions();
-        var totalTokensConsumed = 0;
-
-        for (var round = 0; round < maxToolRounds; round++)
-        {
-            var completion = await _openRouterClient.GetCompletionAsync(
-                _conversationState.Messages,
-                tools,
-                cancellationToken);
-
-            totalTokensConsumed += completion.TotalTokens ?? 0;
-
-            if (completion.ToolCalls.Count == 0)
-            {
-                if (string.IsNullOrWhiteSpace(completion.Content))
-                {
-                    throw new InvalidOperationException("Model response was empty.");
-                }
-
-                _conversationState.AddAssistantMessage(completion.Content);
-                return new AssistantReplyResult(completion.Content, totalTokensConsumed);
-            }
-
-            _conversationState.AddAssistantToolCallMessage(completion.ToolCalls, completion.Content);
-
-            foreach (var toolCall in completion.ToolCalls)
-            {
-                var toolResult = await ExecuteToolCallSafelyAsync(toolCall, cancellationToken);
-                _conversationState.AddToolMessage(toolCall.Id, toolCall.Function.Name, toolResult);
-            }
-        }
-
-        throw new InvalidOperationException("Exceeded the maximum tool-calling rounds.");
-    }
-
-    private sealed record AssistantReplyResult(string Reply, int TotalTokensConsumed);
-
-    private async Task<string> ExecuteToolCallSafelyAsync(ChatToolCall toolCall, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var result = await _toolRegistry.ExecuteAsync(toolCall, cancellationToken);
-            return result.Content;
-        }
-        catch (Exception exception)
-        {
-            _logger.LogWarning(exception, "Tool execution failed for '{ToolName}'.", toolCall.Function.Name);
-
-            return JsonSerializer.Serialize(new
-            {
-                ok = false,
-                error = $"Tool '{toolCall.Function.Name}' failed: {exception.Message}"
-            });
         }
     }
 
@@ -176,7 +108,7 @@ public sealed class ConsoleAgent
                 PrintHelp();
                 return true;
             case "/reset":
-                _conversationState.Reset(_options.SystemPrompt);
+                _agentService.ResetSession(ConsoleSessionId);
                 Console.WriteLine("conversation reset");
                 return true;
             case "/exit":
@@ -194,7 +126,7 @@ public sealed class ConsoleAgent
                         return true;
                     }
 
-                    _conversationState.Reset(newPrompt);
+                    _agentService.ResetSession(ConsoleSessionId, newPrompt);
                     Console.WriteLine("system prompt updated and conversation reset");
                     return true;
                 }
