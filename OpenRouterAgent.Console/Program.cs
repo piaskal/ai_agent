@@ -5,11 +5,14 @@ using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.Agent;
 using OpenRouterAgent.ConsoleApp.Agent.Tools;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
+using Serilog;
 
 try
 {
 	var builder = Host.CreateApplicationBuilder(args);
 	builder.Configuration.AddUserSecrets<Program>(optional: true);
+	builder.Services.AddSerilog((services, loggerConfig) =>
+		loggerConfig.ReadFrom.Configuration(builder.Configuration));
 	builder.Configuration.AddCommandLine(
 		args,
 		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
