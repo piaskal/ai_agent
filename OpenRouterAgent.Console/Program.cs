@@ -13,8 +13,11 @@ try
 {
 	var builder = WebApplication.CreateBuilder(configArgs);
 	builder.Configuration.AddUserSecrets<Program>(optional: true);
+	var runLogPath = Path.Combine("logs", $"trace-{DateTime.Now:yyyyMMdd-HHmmss}.log");
 	builder.Services.AddSerilog((services, loggerConfig) =>
-		loggerConfig.ReadFrom.Configuration(builder.Configuration));
+		loggerConfig
+			.ReadFrom.Configuration(builder.Configuration)
+			.WriteTo.File(runLogPath));
 	builder.Configuration.AddCommandLine(
 		configArgs,
 		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -34,12 +37,18 @@ try
 			$"Configuration value '{OpenRouterOptions.SectionName}:Model' is required.")
 		.ValidateOnStart();
 
+	builder.Services
+		.AddOptions<AgentToolOptions>()
+		.Bind(builder.Configuration.GetSection(AgentToolOptions.SectionName));
+
 	builder.Services.AddHttpClient<IOpenRouterClient, OpenRouterClient>();
 	builder.Services.AddSingleton<IAgentTool, GetCurrentTimeTool>();
 	builder.Services.AddSingleton<IAgentTool, SumTwoNumbersTool>();
 	builder.Services.AddSingleton<IAgentTool, DistanceBetweenLocationsTool>();
 	builder.Services.AddSingleton<IAgentTool, GetSuspectsTool>();
 	builder.Services.AddSingleton<IAgentTool, GetSuspectLocationsTool>();
+	builder.Services.AddSingleton<IAgentTool, GetSuspectAccessLevelTool>();
+	builder.Services.AddSingleton<IAgentTool, GetPowerplantLocationsTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();

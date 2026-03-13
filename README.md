@@ -27,6 +27,22 @@ $env:OPENROUTER__MODEL = "stepfun/step-3.5-flash:free"
 
 You can also edit [OpenRouterAgent.Console/appsettings.json](OpenRouterAgent.Console/appsettings.json) for non-secret defaults such as model, prompt, and temperature.
 
+Tool configuration is under `AgentTools`:
+
+- `EnableTools`: globally turn tool-calling on/off
+- `EnabledTools`: allow-list of tool names (empty means all tools)
+- `DisabledTools`: block-list of tool names (applied after `EnabledTools`)
+
+Example:
+
+```json
+"AgentTools": {
+	"EnableTools": true,
+	"EnabledTools": ["get_current_time", "sum_two_numbers"],
+	"DisabledTools": ["get_suspects"]
+}
+```
+
 ## Run
 
 ```powershell

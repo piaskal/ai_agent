@@ -106,6 +106,12 @@ public sealed class AgentService
     {
         try
         {
+            _logger.LogInformation(
+                "Executing tool call '{ToolName}' (id: {ToolCallId}) with arguments: {ToolArguments}",
+                toolCall.Function.Name,
+                toolCall.Id,
+                toolCall.Function.Arguments);
+
             var result = await _toolRegistry.ExecuteAsync(toolCall, cancellationToken);
             return result.Content;
         }
