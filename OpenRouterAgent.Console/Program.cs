@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using System.Text.Json.Serialization;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.Agent;
@@ -49,6 +50,8 @@ try
 	builder.Services.AddSingleton<IAgentTool, GetSuspectLocationsTool>();
 	builder.Services.AddSingleton<IAgentTool, GetSuspectAccessLevelTool>();
 	builder.Services.AddSingleton<IAgentTool, GetPowerplantLocationsTool>();
+	builder.Services.AddSingleton<IAgentTool, CheckPackageStatusTool>();
+	builder.Services.AddSingleton<IAgentTool, RedirectPackageTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
@@ -66,9 +69,20 @@ try
 				? agentService.CreateSession()
 				: req.SessionId;
 
+			app.Logger.LogInformation(
+				"Received /chat request for session '{SessionId}' with message {Message}.",
+				sessionId,
+				req.Message);
+
 			try
 			{
 				var reply = await agentService.ChatAsync(sessionId, req.Message, ct);
+
+				app.Logger.LogInformation(
+				"Sending /chat response for session '{SessionId}': {reply.Reply}.",
+				sessionId,
+				reply.Reply);
+
 				return Results.Ok(new ChatResponse(sessionId, reply.Reply, reply.TotalTokensConsumed));
 			}
 			catch (OperationCanceledException)
@@ -124,5 +138,25 @@ catch (OptionsValidationException exception)
 	Environment.ExitCode = 1;
 }
 
-internal sealed record ChatRequest(string Message, string? SessionId = null);
-internal sealed record ChatResponse(string SessionId, string Reply, int TokensConsumed);
+internal sealed class ChatRequest{
+	[JsonPropertyName("msg")]
+	[JsonRequired]
+	public required string Message { get; set; }
+	[JsonPropertyName("sessionID")]
+	public string? SessionId { get; set; } = null;
+}
+internal sealed class ChatResponse{
+	[JsonIgnore]
+	public string SessionId { get; set; }
+	[JsonPropertyName("msg")]
+	public string Reply { get; set; }
+	[JsonIgnore]
+	public int TokensConsumed { get; set; }
+
+	public ChatResponse(string sessionId, string reply, int tokensConsumed)
+	{
+		SessionId = sessionId;
+		Reply = reply;
+		TokensConsumed = tokensConsumed;
+	}
+}

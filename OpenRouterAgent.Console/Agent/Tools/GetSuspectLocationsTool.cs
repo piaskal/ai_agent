@@ -14,7 +14,6 @@ public sealed class GetSuspectLocationsTool : IAgentTool
     {
         var toolOptions = options.Value;
         ApiKey = toolOptions.ApiKey;
-       
     }
 
     public string Name => ToolName;
