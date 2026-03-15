@@ -51,9 +51,13 @@ public sealed class CheckPackageStatusTool : IAgentTool
             "application/json");
 
         var response = await httpClient.PostAsync("https://hub.ag3nts.org/api/packages", content, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"Failed to check package status: {errorContent} (Status code: {response.StatusCode})");
+        }
 
-        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
-        return new ToolExecutionResult(responseContent);
+        var resultContent = await response.Content.ReadAsStringAsync(cancellationToken);
+        return new ToolExecutionResult(resultContent);
     }
 }
