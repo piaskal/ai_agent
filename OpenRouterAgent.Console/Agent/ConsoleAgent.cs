@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenRouterAgent.ConsoleApp.Agent.Tools;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 
 namespace OpenRouterAgent.ConsoleApp.Agent;
@@ -7,6 +8,7 @@ namespace OpenRouterAgent.ConsoleApp.Agent;
 public sealed class ConsoleAgent
 {
     private readonly AgentService _agentService;
+    private readonly IAgentToolRegistry _toolRegistry;
     private readonly OpenRouterOptions _options;
     private readonly ILogger<ConsoleAgent> _logger;
 
@@ -14,10 +16,12 @@ public sealed class ConsoleAgent
 
     public ConsoleAgent(
         AgentService agentService,
+        IAgentToolRegistry toolRegistry,
         IOptions<OpenRouterOptions> options,
         ILogger<ConsoleAgent> logger)
     {
         _agentService = agentService;
+        _toolRegistry = toolRegistry;
         _options = options.Value;
         _logger = logger;
     }
@@ -111,12 +115,21 @@ public sealed class ConsoleAgent
                 _agentService.ResetSession(ConsoleSessionId);
                 Console.WriteLine("conversation reset");
                 return true;
+            case "/tools":
+                PrintTools();
+                return true;
             case "/exit":
             case "/quit":
                 Console.WriteLine("bye");
                 shutdown.Cancel();
                 return true;
             default:
+                if (command.StartsWith("/tool ", StringComparison.OrdinalIgnoreCase))
+                {
+                    _ = ExecuteToolDebugAsync(command[6..], shutdown.Token);
+                    return true;
+                }
+
                 if (command.StartsWith("/system ", StringComparison.OrdinalIgnoreCase))
                 {
                     var newPrompt = command[8..].Trim();
@@ -140,15 +153,76 @@ public sealed class ConsoleAgent
     {
         Console.WriteLine($"OpenRouter Agent {_options.AppName} - Model: {_options.Model}");
         Console.WriteLine("Type a prompt to chat.");
-        Console.WriteLine("Commands: /help, /reset, /system <prompt>, /exit");
+        Console.WriteLine("Commands: /help, /reset, /tools, /tool <name> [json], /system <prompt>, /exit");
         Console.WriteLine();
     }
 
     private static void PrintHelp()
     {
-        Console.WriteLine("/help                Show available commands");
-        Console.WriteLine("/reset               Clear the current conversation history");
-        Console.WriteLine("/system <prompt>     Replace the system prompt and reset history");
-        Console.WriteLine("/exit                Exit the application");
+        Console.WriteLine("/help                     Show available commands");
+        Console.WriteLine("/reset                    Clear the current conversation history");
+        Console.WriteLine("/tools                    List all registered tools");
+        Console.WriteLine("/tool <name> [json]       Execute a tool directly with optional JSON arguments");
+        Console.WriteLine("/system <prompt>          Replace the system prompt and reset history");
+        Console.WriteLine("/exit                     Exit the application");
+    }
+
+    private void PrintTools()
+    {
+        var definitions = _toolRegistry.GetToolDefinitions();
+        if (definitions.Count == 0)
+        {
+            Console.WriteLine("No tools are currently registered.");
+            return;
+        }
+
+        Console.WriteLine($"Registered tools ({definitions.Count}):");
+        foreach (var def in definitions)
+        {
+            Console.WriteLine($"  {def.Function.Name,-30} {def.Function.Description}");
+        }
+    }
+
+    private async Task ExecuteToolDebugAsync(string args, CancellationToken cancellationToken)
+    {
+        var spaceIndex = args.IndexOf(' ');
+        string toolName;
+        string jsonArguments;
+
+        if (spaceIndex < 0)
+        {
+            toolName = args.Trim();
+            jsonArguments = "{}";
+        }
+        else
+        {
+            toolName = args[..spaceIndex].Trim();
+            jsonArguments = args[spaceIndex..].Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(toolName))
+        {
+            Console.WriteLine("usage: /tool <name> [json_args]");
+            return;
+        }
+
+        var toolCall = new ChatToolCall(
+            Id: $"debug-{Guid.NewGuid():N}",
+            Type: "function",
+            Function: new ChatToolCallFunction(toolName, jsonArguments));
+
+        _logger.LogInformation("Invoking '{ToolName}' with: {Arguments}", toolName, jsonArguments);
+
+        try
+        {
+            var result = await _toolRegistry.ExecuteAsync(toolCall, cancellationToken);
+            _logger.LogInformation("Result: {Result}", result.Content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Tool '{ToolName}' failed.", toolName);
+        }
+
+        Console.WriteLine();
     }
 }

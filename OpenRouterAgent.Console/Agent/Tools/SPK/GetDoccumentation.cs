@@ -18,7 +18,7 @@ public sealed class GetDocumentation : IAgentTool
         Type: "function",
         Function: new ChatToolDefinitionFunction(
             Name: ToolName,
-            Description: "pobiera dokumentację systemu SPK z pliku index.md lub wybranego pliku załącznika.",
+            Description: "pobiera dokumentację systemu SPK z pliku https://hub.ag3nts.org/dane/doc/index.md lub wybranego pliku załącznika https://hub.ag3nts.org/dane/doc/<file>",
             ParametersSchema: new
             {
                 type = "object",
@@ -36,9 +36,18 @@ public sealed class GetDocumentation : IAgentTool
         if (!string.IsNullOrWhiteSpace(toolCall.Function.Arguments))
         {
             var args = JsonSerializer.Deserialize<Dictionary<string, string>>(toolCall.Function.Arguments);
+
             if (args is not null && args.TryGetValue("file", out var candidateFile) && !string.IsNullOrWhiteSpace(candidateFile))
             {
                 url = $"{BaseUrl}{candidateFile}";
+                if (!(
+                    candidateFile.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
+                    candidateFile.EndsWith(".txt", StringComparison.OrdinalIgnoreCase)
+                ))
+                
+                {
+                    throw new InvalidOperationException($"Invalid file specified. Only text files are allowed. Cannot read {url} directly ");
+                }   
             }
         }
 

@@ -54,6 +54,7 @@ try
 	builder.Services.AddSingleton<IAgentTool, RedirectPackageTool>();
 	builder.Services.AddSingleton<IAgentTool, GetDocumentation>();
 	builder.Services.AddSingleton<IAgentTool, OcrImageDocumentTool>();
+	builder.Services.AddSingleton<IAgentTool, VerifyDeclarationTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();

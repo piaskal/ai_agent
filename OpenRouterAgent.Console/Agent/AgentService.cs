@@ -68,7 +68,7 @@ public sealed class AgentService
 
     private async Task<AgentReply> GetAssistantReplyAsync(ConversationState state, CancellationToken cancellationToken)
     {
-        const int maxToolRounds = 6;
+        const int maxToolRounds = 10;
         var tools = _toolRegistry.GetToolDefinitions();
         var totalTokensConsumed = 0;
 

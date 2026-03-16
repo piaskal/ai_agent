@@ -33,6 +33,7 @@ public sealed class OpenRouterClient : IOpenRouterClient
         _logger = logger;
 
         _httpClient.BaseAddress = new Uri(_options.BaseUrl);
+        _httpClient.Timeout = TimeSpan.FromSeconds(600);
         _httpClient.DefaultRequestHeaders.Accept.Clear();
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
