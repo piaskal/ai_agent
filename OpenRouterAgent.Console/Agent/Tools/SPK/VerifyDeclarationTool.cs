@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 
-namespace OpenRouterAgent.ConsoleApp.Agent.Tools;
+namespace OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
 
 public sealed class VerifyDeclarationTool : IAgentTool
 {

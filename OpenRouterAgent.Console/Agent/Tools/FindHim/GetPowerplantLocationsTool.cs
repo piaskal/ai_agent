@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 
-namespace OpenRouterAgent.ConsoleApp.Agent.Tools;
+namespace OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
 
 public sealed class GetPowerplantLocationsTool : IAgentTool
 {

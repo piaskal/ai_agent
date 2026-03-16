@@ -3,7 +3,7 @@ using OpenRouterAgent.ConsoleApp.OpenRouter;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace OpenRouterAgent.ConsoleApp.Agent.Tools;
+namespace OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
 
 public sealed class GetSuspectAccessLevelTool : IAgentTool
 {

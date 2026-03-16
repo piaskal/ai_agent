@@ -2,14 +2,14 @@ using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 using System.Text.Json;
 
-namespace OpenRouterAgent.ConsoleApp.Agent.Tools;
+namespace OpenRouterAgent.ConsoleApp.Agent.Tools.RedirectPackage;
 
-public sealed class RedirectPackageTool : IAgentTool
+public sealed class CheckPackageStatusTool : IAgentTool
 {
-    public const string ToolName = "redirect_package";
+    public const string ToolName = "check_package_status";
     private readonly string _apiKey;
 
-    public RedirectPackageTool(IOptions<AgentToolOptions> options)
+    public CheckPackageStatusTool(IOptions<AgentToolOptions> options)
     {
         _apiKey = options.Value.ApiKey;
     }
@@ -20,17 +20,15 @@ public sealed class RedirectPackageTool : IAgentTool
         Type: "function",
         Function: new ChatToolDefinitionFunction(
             Name: ToolName,
-            Description: "Redirects a package to a new destination using a security code.",
+            Description: "Checks the status of a package by its ID.",
             ParametersSchema: new
             {
                 type = "object",
                 properties = new
                 {
-                    packageId = new { type = "string", description = "The package ID to redirect (e.g. PKG12345678)." },
-                    destination = new { type = "string", description = "The destination code to redirect the package to (e.g. PWR3847PL)." },
-                    code = new { type = "string", description = "The security code authorizing the redirect." }
+                    packageId = new { type = "string", description = "The package ID to check (e.g. PKG12345678)." }
                 },
-                required = new[] { "packageId", "destination", "code" }
+                required = new[] { "packageId" }
             }));
 
     public async Task<ToolExecutionResult> ExecuteAsync(ChatToolCall toolCall, CancellationToken cancellationToken = default)
@@ -39,16 +37,12 @@ public sealed class RedirectPackageTool : IAgentTool
 
         var parameters = JsonSerializer.Deserialize<Dictionary<string, string>>(toolCall.Function.Arguments);
         var packageId = parameters?["packageId"] ?? throw new InvalidOperationException("Missing required parameter 'packageId'.");
-        var destination = parameters?["destination"] ?? throw new InvalidOperationException("Missing required parameter 'destination'.");
-        var code = parameters?["code"] ?? throw new InvalidOperationException("Missing required parameter 'code'.");
 
         var requestBody = new
         {
             apikey = _apiKey,
-            action = "redirect",
-            packageid = packageId,
-            destination,
-            code
+            action = "check",
+            packageid = packageId
         };
 
         var content = new StringContent(
@@ -57,9 +51,13 @@ public sealed class RedirectPackageTool : IAgentTool
             "application/json");
 
         var response = await httpClient.PostAsync("https://hub.ag3nts.org/api/packages", content, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"Failed to check package status: {errorContent} (Status code: {response.StatusCode})");
+        }
 
-        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
-        return new ToolExecutionResult(responseContent);
+        var resultContent = await response.Content.ReadAsStringAsync(cancellationToken);
+        return new ToolExecutionResult(resultContent);
     }
 }

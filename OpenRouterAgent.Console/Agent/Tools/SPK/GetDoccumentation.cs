@@ -3,7 +3,7 @@ using System.Text.Json;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 using System.Threading.Tasks;
 
-namespace OpenRouterAgent.ConsoleApp.Agent.Tools;
+namespace OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
 
 public sealed class GetDocumentation : IAgentTool
 {

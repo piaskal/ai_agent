@@ -4,6 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.Agent;
 using OpenRouterAgent.ConsoleApp.Agent.Tools;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.RedirectPackage;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 using Serilog;
 

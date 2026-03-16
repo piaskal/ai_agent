@@ -3,7 +3,7 @@ using OpenRouterAgent.ConsoleApp.OpenRouter;
 using System.Globalization;
 using System.Text.Json;
 
-namespace OpenRouterAgent.ConsoleApp.Agent.Tools;
+namespace OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
 
 public sealed class GetSuspectLocationsTool : IAgentTool
 {
