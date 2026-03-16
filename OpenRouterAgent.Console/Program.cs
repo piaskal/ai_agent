@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.Agent;
 using OpenRouterAgent.ConsoleApp.Agent.Tools;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Categorize;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.RedirectPackage;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
@@ -58,6 +59,9 @@ try
 	builder.Services.AddSingleton<IAgentTool, GetDocumentation>();
 	builder.Services.AddSingleton<IAgentTool, OcrImageDocumentTool>();
 	builder.Services.AddSingleton<IAgentTool, VerifyDeclarationTool>();
+	builder.Services.AddSingleton<IAgentTool, GetCargoDesriptions>();
+	builder.Services.AddSingleton<IGetCargoDesriptions, GetCargoDesriptions>();
+	builder.Services.AddSingleton<IAgentTool, CategorizeCargo>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
