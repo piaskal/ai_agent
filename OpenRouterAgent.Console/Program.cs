@@ -51,7 +51,10 @@ try
 	builder.Services.AddSingleton<IAgentTool, GetSuspectAccessLevelTool>();
 	builder.Services.AddSingleton<IAgentTool, GetPowerplantLocationsTool>();
 	builder.Services.AddSingleton<IAgentTool, CheckPackageStatusTool>();
-	builder.Services.AddSingleton<IAgentTool, RedirectPackageTool>();		builder.Services.AddSingleton<IAgentTool, GetDocumentation>();	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
+	builder.Services.AddSingleton<IAgentTool, RedirectPackageTool>();
+	builder.Services.AddSingleton<IAgentTool, GetDocumentation>();
+	builder.Services.AddSingleton<IAgentTool, OcrImageDocumentTool>();
+	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
 
@@ -59,6 +62,7 @@ try
 
 	if (isServeMode)
 	{
+		app.MapGet("/", () => Results.Ok("OpenRouterAgent is running. Use POST /chat to interact with the agent."));
 		app.MapPost("/chat", async (ChatRequest req, AgentService agentService, CancellationToken ct) =>
 		{
 			if (string.IsNullOrWhiteSpace(req.Message))

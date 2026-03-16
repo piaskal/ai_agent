@@ -53,9 +53,20 @@ public sealed class GetDocumentation : IAgentTool
             throw new InvalidOperationException($"Invalid URL '{url}' provided for GetDocumentation.");
 
         using var response = await httpClient.GetAsync(url, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        if(!response.IsSuccessStatusCode) {
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException($"Failed to fetch documentation from '{url}'. Status code: {response.StatusCode}. Response: {errorContent}");
+        }
 
-        return await response.Content.ReadAsStringAsync(cancellationToken);
+        if (response.Content.Headers.ContentType?.MediaType?.StartsWith("text") == true)        {
+           return await response.Content.ReadAsStringAsync(cancellationToken);
+        } else
+        {
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return Convert.ToBase64String(bytes);
+        }
+
+        
     }
 }
 

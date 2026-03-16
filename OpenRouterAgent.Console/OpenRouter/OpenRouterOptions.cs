@@ -10,6 +10,8 @@ public sealed class OpenRouterOptions
 
     public string Model { get; set; } = "openai/gpt-4o-mini";
 
+    public string OcrModel { get; set; } = "openrouter/free";
+
     public string SystemPrompt { get; set; } =
         "You are a concise and reliable AI assistant. Ask clarifying questions only when necessary and prefer actionable answers.";
 
