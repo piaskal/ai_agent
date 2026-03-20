@@ -57,8 +57,8 @@ public sealed class OcrImageDocumentTool : IAgentTool
 
         var selectedModel = !string.IsNullOrWhiteSpace(model)
             ? model
-            : !string.IsNullOrWhiteSpace(_options.OcrModel)
-                ? _options.OcrModel
+            : !string.IsNullOrWhiteSpace(_options.ToolModel)
+                ? _options.ToolModel
                 : _options.Model;
 
         var extractedText = await ExecuteOcrAsync(imageUrl, prompt, selectedModel, cancellationToken);

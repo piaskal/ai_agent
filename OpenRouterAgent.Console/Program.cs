@@ -5,11 +5,13 @@ using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.Agent;
 using OpenRouterAgent.ConsoleApp.Agent.Tools;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Categorize;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Electricity;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.RedirectPackage;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 using Serilog;
+using Serilog.Filters;
 
 var isServeMode = args.Contains("--serve", StringComparer.OrdinalIgnoreCase);
 var configArgs = args.Where(a => !a.Equals("--serve", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -19,10 +21,17 @@ try
 	var builder = WebApplication.CreateBuilder(configArgs);
 	builder.Configuration.AddUserSecrets<Program>(optional: true);
 	var runLogPath = Path.Combine("logs", $"trace-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+	var describeConnectionMapVerboseLogPath = Path.Combine("logs", "describe-connection-map-verbose.log");
 	builder.Services.AddSerilog((services, loggerConfig) =>
 		loggerConfig
 			.ReadFrom.Configuration(builder.Configuration)
-			.WriteTo.File(runLogPath));
+			.WriteTo.File(runLogPath)
+			.WriteTo.Logger(lc => lc
+				.Filter.ByIncludingOnly(Matching.FromSource<DescribeConnectionMapTool>())
+				.WriteTo.File(
+					describeConnectionMapVerboseLogPath,
+					restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Verbose,
+					shared: true)));
 	builder.Configuration.AddCommandLine(
 		configArgs,
 		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -58,10 +67,13 @@ try
 	builder.Services.AddSingleton<IAgentTool, RedirectPackageTool>();
 	builder.Services.AddSingleton<IAgentTool, GetDocumentation>();
 	builder.Services.AddSingleton<IAgentTool, OcrImageDocumentTool>();
+	builder.Services.AddSingleton<IAgentTool, DescribeConnectionMapTool>();
+	builder.Services.AddSingleton<IAgentTool, RotateTileTool>();
 	builder.Services.AddSingleton<IAgentTool, VerifyDeclarationTool>();
 	builder.Services.AddSingleton<IAgentTool, GetCargoDesriptions>();
 	builder.Services.AddSingleton<IGetCargoDesriptions, GetCargoDesriptions>();
 	builder.Services.AddSingleton<IAgentTool, CategorizeCargo>();
+	builder.Services.AddSingleton<IAgentTool, RailwayApiTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
