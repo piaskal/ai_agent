@@ -6,6 +6,7 @@ using OpenRouterAgent.ConsoleApp.Agent;
 using OpenRouterAgent.ConsoleApp.Agent.Tools;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Categorize;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Electricity;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.FailureLogs;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.RedirectPackage;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
@@ -37,15 +38,39 @@ try
 		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 		{
 			["--model"] = "OpenRouter:Model",
-			["-m"] = "OpenRouter:Model"
+			["-m"] = "OpenRouter:Model",
+			["--provider"] = "OpenRouter:Provider",
+			["-p"] = "OpenRouter:Provider"
 		});
 
 	builder.Services
 		.AddOptions<OpenRouterOptions>()
 		.Bind(builder.Configuration.GetSection(OpenRouterOptions.SectionName))
+		.PostConfigure(options =>
+		{
+			if (string.IsNullOrWhiteSpace(options.LlmRouterApiKey))
+			{
+				options.LlmRouterApiKey = builder.Configuration["LlmRouter:ApiKey"] ?? string.Empty;
+			}
+
+			if (string.IsNullOrWhiteSpace(options.BaseUrl))
+			{
+				options.BaseUrl = builder.Configuration["OpenRouter:BaseUrl"] ?? string.Empty;
+			}
+		})
 		.Validate(
-			options => !string.IsNullOrWhiteSpace(options.ApiKey),
-			$"Configuration value '{OpenRouterOptions.SectionName}:ApiKey' is required. Use appsettings, user secrets, or OPENROUTER__APIKEY.")
+			options => options.IsProviderValid(),
+			"Configuration value 'OpenRouter:Provider' must be either 'openrouter' or 'llmrouter'.")
+		.Validate(
+			options =>
+			{
+				var key = options.GetEffectiveApiKey();
+				return !string.IsNullOrWhiteSpace(key);
+			},
+			"Selected provider API key is missing. For llmrouter use 'LlmRouter:ApiKey' (or LLMROUTER__APIKEY). For openrouter use 'OpenRouter:ApiKey' (or OPENROUTER__APIKEY).")
+		.Validate(
+			options => !string.IsNullOrWhiteSpace(options.GetEffectiveBaseUrl()),
+			"Selected provider base URL is missing. Set 'OpenRouter:BaseUrl' or provider-specific base URLs.")
 		.Validate(
 			options => !string.IsNullOrWhiteSpace(options.Model),
 			$"Configuration value '{OpenRouterOptions.SectionName}:Model' is required.")
@@ -74,6 +99,8 @@ try
 	builder.Services.AddSingleton<IGetCargoDesriptions, GetCargoDesriptions>();
 	builder.Services.AddSingleton<IAgentTool, CategorizeCargo>();
 	builder.Services.AddSingleton<IAgentTool, RailwayApiTool>();
+	builder.Services.AddSingleton<IAgentTool, GetFailureLogsTool>();
+	builder.Services.AddSingleton<IAgentTool, SubmitFailureLogsForAnalysisTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
@@ -157,7 +184,7 @@ catch (OptionsValidationException exception)
 		Console.Error.WriteLine($"- {failure}");
 	}
 
-	Console.Error.WriteLine("Set the value in user secrets or with the OPENROUTER__APIKEY environment variable, then run the app again.");
+	Console.Error.WriteLine("Set the selected provider API key in user secrets or environment variables and run again.");
 	Environment.ExitCode = 1;
 }
 

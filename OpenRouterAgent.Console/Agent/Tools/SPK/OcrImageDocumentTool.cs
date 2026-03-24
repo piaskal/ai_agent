@@ -106,12 +106,12 @@ public sealed class OcrImageDocumentTool : IAgentTool
     {
         using var httpClient = new HttpClient
         {
-            BaseAddress = new Uri(_options.BaseUrl)
+            BaseAddress = new Uri(_options.GetEffectiveBaseUrl())
         };
 
         httpClient.DefaultRequestHeaders.Accept.Clear();
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.GetEffectiveApiKey());
 
         if (!string.IsNullOrWhiteSpace(_options.AppUrl))
         {
@@ -144,7 +144,7 @@ public sealed class OcrImageDocumentTool : IAgentTool
 
         _logger.LogInformation("Executing OCR for image '{ImageUrl}' with model '{Model}'.", imageUrl, model);
 
-        using var response = await httpClient.PostAsJsonAsync("api/v1/responses", request, SerializerOptions, cancellationToken);
+        using var response = await httpClient.PostAsJsonAsync(_options.GetResponsesPath(), request, SerializerOptions, cancellationToken);
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)

@@ -116,12 +116,12 @@ public sealed class DescribeConnectionMapTool : IAgentTool
     {
         using var httpClient = new HttpClient
         {
-            BaseAddress = new Uri(_options.BaseUrl)
+            BaseAddress = new Uri(_options.GetEffectiveBaseUrl())
         };
 
         httpClient.DefaultRequestHeaders.Accept.Clear();
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.GetEffectiveApiKey());
 
         if (!string.IsNullOrWhiteSpace(_options.AppUrl))
         {
@@ -252,7 +252,7 @@ public sealed class DescribeConnectionMapTool : IAgentTool
     {
         for (var attempt = 1; attempt <= MaxRetries; attempt++)
         {
-            var response = await httpClient.PostAsJsonAsync("api/v1/responses", request, SerializerOptions, cancellationToken);
+            var response = await httpClient.PostAsJsonAsync(_options.GetResponsesPath(), request, SerializerOptions, cancellationToken);
 
             if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || attempt == MaxRetries)
             {

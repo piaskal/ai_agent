@@ -32,11 +32,11 @@ public sealed class OpenRouterClient : IOpenRouterClient
         _options = options.Value;
         _logger = logger;
 
-        _httpClient.BaseAddress = new Uri(_options.BaseUrl);
+        _httpClient.BaseAddress = new Uri(_options.GetEffectiveBaseUrl());
         _httpClient.Timeout = TimeSpan.FromSeconds(600);
         _httpClient.DefaultRequestHeaders.Accept.Clear();
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.GetEffectiveApiKey());
 
         if (!string.IsNullOrWhiteSpace(_options.AppUrl))
         {
@@ -74,7 +74,7 @@ public sealed class OpenRouterClient : IOpenRouterClient
         }
 
         using var response = await _httpClient.PostAsJsonAsync(
-            "api/v1/responses",
+            _options.GetResponsesPath(),
             request,
             SerializerOptions,
             cancellationToken);

@@ -1,11 +1,11 @@
 # OpenRouterAgent
 
-Simple .NET console AI agent that sends chat completions through OpenRouter.
+Simple .NET console AI agent that sends chat completions through LLM Router responses API.
 
 ## Requirements
 
 - .NET 10 SDK
-- An OpenRouter API key
+- An LLM Router API key
 
 ## Configuration
 
@@ -22,6 +22,8 @@ Configuration sources used by the app:
 ### Option 1: user secrets
 
 ```powershell
+dotnet user-secrets set "OpenRouter:Provider" "llmrouter" --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj
+dotnet user-secrets set "LlmRouter:ApiKey" "<your-llmrouter-api-key>" --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj
 dotnet user-secrets set "OpenRouter:ApiKey" "<your-openrouter-api-key>" --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj
 dotnet user-secrets set "OpenRouter:Model" "stepfun/step-3.5-flash:free" --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj
 dotnet user-secrets set "AgentTools:ApiKey" "<your-ag3nts-api-key>" --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj
@@ -30,12 +32,19 @@ dotnet user-secrets set "AgentTools:ApiKey" "<your-ag3nts-api-key>" --project .\
 ### Option 2: environment variables
 
 ```powershell
+$env:OPENROUTER__PROVIDER = "llmrouter"
+$env:LLMROUTER__APIKEY = "<your-llmrouter-api-key>"
 $env:OPENROUTER__APIKEY = "<your-openrouter-api-key>"
 $env:OPENROUTER__MODEL = "stepfun/step-3.5-flash:free"
 $env:AGENTTOOLS__APIKEY = "<your-ag3nts-api-key>"
 ```
 
-You can also edit [OpenRouterAgent.Console/appsettings.json](OpenRouterAgent.Console/appsettings.json) for defaults such as model, prompt, temperature, tool configuration, and logging.
+You can also edit [OpenRouterAgent.Console/appsettings.json](OpenRouterAgent.Console/appsettings.json) for defaults such as provider, model, prompt, temperature, tool configuration, and logging.
+
+Quick switching:
+- Set OpenRouter:Provider to llmrouter or openrouter.
+- Keep both keys configured (LlmRouter:ApiKey and OpenRouter:ApiKey).
+- Optionally use --provider or -p at runtime.
 
 ### OpenRouter options
 
@@ -43,8 +52,11 @@ Section: `OpenRouter`
 
 | Key | Type | Required | Default | Notes |
 | --- | --- | --- | --- | --- |
-| `BaseUrl` | `string` | no | `https://openrouter.ai/` | Base URL for OpenRouter API |
-| `ApiKey` | `string` | yes | empty | OpenRouter API key |
+| `Provider` | `string` | no | `llmrouter` | Active provider. Supported values: `llmrouter`, `openrouter` |
+| `BaseUrl` | `string` | no | empty | Optional override for active provider base URL |
+| `OpenRouterBaseUrl` | `string` | no | `https://openrouter.ai/` | Default base URL when provider is `openrouter` |
+| `LlmRouterBaseUrl` | `string` | no | `https://llmrouter.gft.com/openai/v1/` | Default base URL when provider is `llmrouter` |
+| `ApiKey` | `string` | no* | empty | OpenRouter API key (required when provider is `openrouter`) |
 | `Model` | `string` | yes | `openai/gpt-4o-mini` | Primary chat model |
 | `ToolModel` | `string` | no | `openrouter/free` | Model used by tool calls such as OCR and image-description flows |
 | `SystemPrompt` | `string` | no | built-in assistant prompt | Initial system prompt |
@@ -55,7 +67,10 @@ Section: `OpenRouter`
 
 Environment variable mappings:
 
+- `OPENROUTER__PROVIDER`
 - `OPENROUTER__BASEURL`
+- `OPENROUTER__OPENROUTERBASEURL`
+- `OPENROUTER__LLMROUTERBASEURL`
 - `OPENROUTER__APIKEY`
 - `OPENROUTER__MODEL`
 - `OPENROUTER__TOOLMODEL`
@@ -64,6 +79,18 @@ Environment variable mappings:
 - `OPENROUTER__MAXTOKENS`
 - `OPENROUTER__APPNAME`
 - `OPENROUTER__APPURL`
+
+### LlmRouter options
+
+Section: `LlmRouter`
+
+| Key | Type | Required | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `ApiKey` | `string` | yes | empty | API key used for calls to `https://llmrouter.gft.com/openai/v1/responses` |
+
+Environment variable mappings:
+
+- `LLMROUTER__APIKEY`
 
 ### AgentTools options
 
@@ -126,7 +153,10 @@ Example full configuration:
 ```json
 {
 	"OpenRouter": {
-		"BaseUrl": "https://openrouter.ai/",
+		"Provider": "llmrouter",
+		"OpenRouterBaseUrl": "https://openrouter.ai/",
+		"LlmRouterBaseUrl": "https://llmrouter.gft.com/openai/v1/",
+		"BaseUrl": "",
 		"ApiKey": "",
 		"Model": "openai/gpt-5-mini",
 		"ToolModel": "google/gemini-3-flash-preview",
@@ -135,6 +165,9 @@ Example full configuration:
 		"MaxTokens": 6048,
 		"AppName": "OpenRouterAgent.Console",
 		"AppUrl": ""
+	},
+	"LlmRouter": {
+		"ApiKey": ""
 	},
 	"AgentTools": {
 		"EnableTools": true,
@@ -182,6 +215,8 @@ The application currently supports these command-line arguments:
 | `--serve` | none | Run as HTTP service instead of the interactive console |
 | `--model` | required | Override `OpenRouter:Model` |
 | `-m` | required | Short form of `--model` |
+| `--provider` | required | Override `OpenRouter:Provider` (`llmrouter` or `openrouter`) |
+| `-p` | required | Short form of `--provider` |
 
 Examples:
 
@@ -189,14 +224,16 @@ Examples:
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --serve
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --model "openai/gpt-5-mini"
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- -m "openai/gpt-5-mini"
-dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --serve --model "openai/gpt-5-mini"
+dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --provider llmrouter
+dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- -p openrouter
+dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --serve --model "openai/gpt-5-mini" --provider llmrouter
 ```
 
 Notes:
 
 - `--serve` is removed from the configuration argument list before config binding and acts as a mode switch only.
 - `--model` and `-m` both map to `OpenRouter:Model`.
-- No other custom application command-line arguments are currently parsed by the app.
+- `--provider` and `-p` both map to `OpenRouter:Provider`.
 
 HTTP endpoints in serve mode:
 
@@ -227,7 +264,7 @@ Examples:
 ## Notes
 
 - The app validates required configuration on startup.
-- Required startup settings are `OpenRouter:ApiKey` and `OpenRouter:Model`.
+- Required startup settings are provider-dependent API key (`LlmRouter:ApiKey` for llmrouter or `OpenRouter:ApiKey` for openrouter) and `OpenRouter:Model`.
 - Conversation history is kept in memory only for the current process.
-- The OpenRouter client sets `HTTP-Referer` and `X-Title` headers when configured.
+- The client sets `HTTP-Referer` and `X-Title` headers when configured.
 - Runtime logs are written to the `logs` directory.
