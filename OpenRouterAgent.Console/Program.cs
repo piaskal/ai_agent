@@ -8,6 +8,7 @@ using OpenRouterAgent.ConsoleApp.Agent.Tools.Categorize;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Electricity;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.FailureLogs;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Mailbox;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.RedirectPackage;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
@@ -101,6 +102,7 @@ try
 	builder.Services.AddSingleton<IAgentTool, RailwayApiTool>();
 	builder.Services.AddSingleton<IAgentTool, GetFailureLogsTool>();
 	builder.Services.AddSingleton<IAgentTool, SubmitFailureLogsForAnalysisTool>();
+	builder.Services.AddSingleton<IAgentTool, GetMailboxTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
