@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.Agent;
 using OpenRouterAgent.ConsoleApp.Agent.Tools;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Categorize;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Drone;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Electricity;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.FailureLogs;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
@@ -103,6 +104,9 @@ try
 	builder.Services.AddSingleton<IAgentTool, GetFailureLogsTool>();
 	builder.Services.AddSingleton<IAgentTool, SubmitFailureLogsForAnalysisTool>();
 	builder.Services.AddSingleton<IAgentTool, GetMailboxTool>();
+	builder.Services.AddSingleton<IAgentTool, DescribeImageTool>();
+	builder.Services.AddSingleton<IAgentTool, DroneControlTool>();
+	builder.Services.AddSingleton<IAgentTool, GetDroneDocumentationTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();

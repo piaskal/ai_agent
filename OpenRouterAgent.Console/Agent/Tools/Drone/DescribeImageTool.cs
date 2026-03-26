@@ -12,12 +12,10 @@ using SixLabors.ImageSharp.Processing;
 
 namespace OpenRouterAgent.ConsoleApp.Agent.Tools.Electricity;
 
-public sealed class DescribeConnectionMapTool : IAgentTool
+public sealed class DescribeImageTool : IAgentTool
 {
-    public const string ToolName = "describe_connection_map";
+    public const string ToolName = "describe_image";
     private const int MaxRetries = 3;
-    private static readonly Rectangle CurrentMapCropArea = new(235, 95, 530 - 235, 390 - 95);
-    private static readonly Rectangle DesiredMapCropArea = new(137, 88, 431 - 137, 380 - 88);
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -26,9 +24,9 @@ public sealed class DescribeConnectionMapTool : IAgentTool
 
     private readonly OpenRouterOptions _options;
     private readonly AgentToolOptions _agentOptions;
-    private readonly ILogger<DescribeConnectionMapTool> _logger;
+    private readonly ILogger<DescribeImageTool> _logger;
 
-    public DescribeConnectionMapTool(IOptions<OpenRouterOptions> options, IOptions<AgentToolOptions> agentOptions, ILogger<DescribeConnectionMapTool> logger)
+    public DescribeImageTool(IOptions<OpenRouterOptions> options, IOptions<AgentToolOptions> agentOptions, ILogger<DescribeImageTool> logger)
     {
         _options = options.Value;
         _agentOptions = agentOptions.Value;
@@ -47,10 +45,10 @@ public sealed class DescribeConnectionMapTool : IAgentTool
                 type = "object",
                 properties = new
                 {
-                    image_reference = new { type = "string", description = "Map state can be either 'current' or 'desired'." },
+                    image_reference = new { type = "string", description = "Image reference must be 'PWR6132PL' ." },
                     prompt = new { type = "string", description = "Optional custom description prompt." },
                 },
-                required = new[] { "map_reference" }
+                required = new[] { "image_reference" }
             }));
 
     public async Task<ToolExecutionResult> ExecuteAsync(ChatToolCall toolCall, CancellationToken cancellationToken = default)
@@ -59,21 +57,11 @@ public sealed class DescribeConnectionMapTool : IAgentTool
         var normalizedMapReference = mapReference.ToLowerInvariant();
         string imageUrl = mapReference.ToLowerInvariant() switch
         {
-            "current" => $"https://hub.ag3nts.org/data/{_agentOptions.ApiKey}/electricity.png",
-            //"reset" => $"https://hub.ag3nts.org/data/{_agentOptions.ApiKey}/electricity.png?reset=1",
-            "desired" => "https://hub.ag3nts.org/i/solved_electricity.png",
-            _ => throw new InvalidOperationException("Invalid 'map_reference' value. Expected 'current' or 'desired'.")
-        };
-
-        var cropArea = normalizedMapReference switch
-        {
-            "current" => CurrentMapCropArea,
-            "desired" => DesiredMapCropArea,
-            _ => throw new InvalidOperationException("Invalid 'map_reference' value. Expected 'current' or 'desired'.")
+            "pwr6132pl" => $"https://hub.ag3nts.org/data/{_agentOptions.ApiKey}/drone.png",
+            _ => throw new InvalidOperationException("Invalid 'image_reference' value. Expected 'PWR6132PL'.")
         };
 
         var imageBytes = await new HttpClient().GetByteArrayAsync(imageUrl, cancellationToken);
-        imageBytes = CropImageToConnectionArea(imageBytes, cropArea);
         var imageBase64 = Convert.ToBase64String(imageBytes);
         
         var description = await DescribeImageAsync(imageBase64, "image/png", prompt, _options.ToolModel, cancellationToken);
@@ -84,21 +72,21 @@ public sealed class DescribeConnectionMapTool : IAgentTool
     {
         if (string.IsNullOrWhiteSpace(argumentsJson))
         {
-            throw new InvalidOperationException("Tool 'describe_connection_map' requires arguments with string field 'map_reference'.");
+            throw new InvalidOperationException("Tool 'describe_image' requires arguments with string field 'image_reference'.");
         }
 
         using var json = JsonDocument.Parse(argumentsJson);
         var root = json.RootElement;
 
-        if (!root.TryGetProperty("map_reference", out var mapReferenceElement) || mapReferenceElement.ValueKind != JsonValueKind.String)
+        if (!root.TryGetProperty("image_reference", out var imageReferenceElement) || imageReferenceElement.ValueKind != JsonValueKind.String)
         {
-            throw new InvalidOperationException("Tool 'describe_connection_map' requires string argument 'map_reference'.");
+            throw new InvalidOperationException("Tool 'describe_image' requires string argument 'image_reference'.");
         }
 
-        var mapReference = mapReferenceElement.GetString();
-        if (string.IsNullOrWhiteSpace(mapReference))
+        var imageReference = imageReferenceElement.GetString();
+        if (string.IsNullOrWhiteSpace(imageReference))
         {
-            throw new InvalidOperationException("Tool 'describe_connection_map' argument 'map_reference' cannot be empty.");
+            throw new InvalidOperationException("Tool 'describe_image' argument 'image_reference' cannot be empty.");
         }
 
         var prompt = root.TryGetProperty("prompt", out var promptElement) && promptElement.ValueKind == JsonValueKind.String
@@ -106,9 +94,9 @@ public sealed class DescribeConnectionMapTool : IAgentTool
             : null;
 
         return (
-            mapReference.Trim(),
+            imageReference.Trim(),
             string.IsNullOrWhiteSpace(prompt)
-                ? "Describe this connection map in detail. Mention key objects, connections, and anything notable."
+                ? "Describe this image in detail. Mention key objects, and anything notable."
                 : prompt!.Trim());
     }
 
@@ -156,7 +144,7 @@ public sealed class DescribeConnectionMapTool : IAgentTool
 
         if (_logger.IsEnabled(LogLevel.Trace))
         {
-            _logger.LogTrace("Describe connection map image payload (base64): {ImageBase64}", imageBase64);
+            _logger.LogTrace("Describe image payload (base64): {ImageBase64}", imageBase64);
         }
 
         string? responseBody = null;
@@ -165,7 +153,7 @@ public sealed class DescribeConnectionMapTool : IAgentTool
 
         if (_logger.IsEnabled(LogLevel.Trace))
         {
-            _logger.LogTrace("Describe connection map model response: {ResponseBody}", responseBody);
+            _logger.LogTrace("Describe image model response: {ResponseBody}", responseBody);
         }
 
         if (!response.IsSuccessStatusCode)
@@ -228,24 +216,6 @@ public sealed class DescribeConnectionMapTool : IAgentTool
 
         var text = builder.ToString().Trim();
         return text.Length == 0 ? null : text;
-    }
-
-    private static byte[] CropImageToConnectionArea(byte[] imageBytes, Rectangle cropArea)
-    {
-        using var sourceStream = new MemoryStream(imageBytes);
-        using var sourceImage = Image.Load(sourceStream);
-
-        var boundedCrop = Rectangle.Intersect(cropArea, new Rectangle(0, 0, sourceImage.Width, sourceImage.Height));
-        if (boundedCrop.Width <= 0 || boundedCrop.Height <= 0)
-        {
-            throw new InvalidOperationException(
-                $"Configured crop area ({cropArea.X},{cropArea.Y})-({cropArea.Right},{cropArea.Bottom}) is outside source image bounds {sourceImage.Width}x{sourceImage.Height}.");
-        }
-
-        sourceImage.Mutate(context => context.Crop(boundedCrop));
-        using var outputStream = new MemoryStream();
-        sourceImage.Save(outputStream, PngFormat.Instance);
-        return outputStream.ToArray();
     }
 
     private async Task<HttpResponseMessage> SendWithRetryOn429Async(HttpClient httpClient, object request, CancellationToken cancellationToken)
