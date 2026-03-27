@@ -63,3 +63,4 @@ obj/
 *.sln.docstates
 appsettings.Development.json
 OpenRouterAgent.Console/data_files/*
+utils/data/**
