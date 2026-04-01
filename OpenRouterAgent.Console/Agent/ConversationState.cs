@@ -5,8 +5,11 @@ namespace OpenRouterAgent.ConsoleApp.Agent;
 public sealed class ConversationState
 {
     private readonly List<ChatMessage> _messages = [];
+    private readonly SemaphoreSlim _gate = new(1, 1);
 
     public IReadOnlyList<ChatMessage> Messages => _messages;
+
+    public SemaphoreSlim Gate => _gate;
 
     public void Reset(string systemPrompt)
     {

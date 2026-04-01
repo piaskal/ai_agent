@@ -30,10 +30,11 @@ public sealed class AgentService
     public async Task<AgentReply> ChatAsync(string sessionId, string message, CancellationToken cancellationToken = default)
     {
         var state = GetOrCreateSession(sessionId);
-        state.AddUserMessage(message);
+        await state.Gate.WaitAsync(cancellationToken);
 
         try
         {
+            state.AddUserMessage(message);
             return await GetAssistantReplyAsync(state, cancellationToken);
         }
         catch
@@ -41,12 +42,15 @@ public sealed class AgentService
             state.RemoveLastUserMessage();
             throw;
         }
+        finally
+        {
+            state.Gate.Release();
+        }
     }
 
     public void ResetSession(string sessionId, string? systemPrompt = null)
     {
-        var state = GetOrCreateSession(sessionId);
-        state.Reset(systemPrompt ?? _options.SystemPrompt);
+        _sessions.TryRemove(sessionId, out _);
     }
 
     public string CreateSession()

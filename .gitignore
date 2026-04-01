@@ -64,3 +64,4 @@ obj/
 appsettings.Development.json
 OpenRouterAgent.Console/data_files/*
 utils/data/**
+NegotiationsTool.Console/negotiations.db
