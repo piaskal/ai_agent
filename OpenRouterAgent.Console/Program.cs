@@ -14,6 +14,7 @@ using OpenRouterAgent.ConsoleApp.Agent.Tools.Mailbox;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Reactor;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.RedirectPackage;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.SaveThem;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.OkoEditor;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 using Serilog;
@@ -114,6 +115,8 @@ try
 	builder.Services.AddSingleton<IAgentTool, ShellCommandTool>();
 	builder.Services.AddSingleton<IAgentTool, SaveThemApiTool>();
 	builder.Services.AddSingleton<IAgentTool, VerifyPathTool>();
+	builder.Services.AddSingleton<IAgentTool, OkoEditorTool>();
+	builder.Services.AddSingleton<IAgentTool, OkoBrowseTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
