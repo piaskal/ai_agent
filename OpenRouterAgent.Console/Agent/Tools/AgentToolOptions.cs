@@ -9,5 +9,6 @@ public sealed class AgentToolOptions
     public string[] EnabledTools { get; set; } = [];
     public string[] DisabledTools { get; set; } = [];
     public string ApiKey { get; set; } = string.Empty;
+    public string TaskVerifyApiTaskName { get; set; } = "windpower";
 
 }

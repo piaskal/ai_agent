@@ -9,6 +9,7 @@ using OpenRouterAgent.ConsoleApp.Agent.Tools.Drone;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Electricity;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.FailureLogs;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.FindHim;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Filesystem;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Firmware;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Mailbox;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Reactor;
@@ -19,6 +20,7 @@ using OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 using Serilog;
 using Serilog.Filters;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Windpower;
 
 var isServeMode = args.Contains("--serve", StringComparer.OrdinalIgnoreCase);
 var configArgs = args.Where(a => !a.Equals("--serve", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -117,6 +119,8 @@ try
 	builder.Services.AddSingleton<IAgentTool, VerifyPathTool>();
 	builder.Services.AddSingleton<IAgentTool, OkoEditorTool>();
 	builder.Services.AddSingleton<IAgentTool, OkoBrowseTool>();
+	builder.Services.AddSingleton<IAgentTool, TaskVerifyApiTool>();
+	builder.Services.AddSingleton<IAgentTool, GetNatanNotesTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
