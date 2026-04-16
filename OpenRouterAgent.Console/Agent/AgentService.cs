@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -72,9 +73,15 @@ public sealed class AgentService
 
     private async Task<AgentReply> GetAssistantReplyAsync(ConversationState state, CancellationToken cancellationToken)
     {
-        const int maxToolRounds = 20;
+        var maxToolRounds = _options.MaxToolRounds > 0 ? _options.MaxToolRounds : 20;
+        var maxConsecutiveIdenticalToolCallBatches = _options.MaxConsecutiveIdenticalToolCallBatches > 0
+            ? _options.MaxConsecutiveIdenticalToolCallBatches
+            : 4;
+
         var tools = _toolRegistry.GetToolDefinitions();
         var totalTokensConsumed = 0;
+        string? previousToolBatchSignature = null;
+        var consecutiveIdenticalToolBatchCount = 0;
 
         for (var round = 0; round < maxToolRounds; round++)
         {
@@ -94,6 +101,24 @@ public sealed class AgentService
                 return new AgentReply(completion.Content, totalTokensConsumed);
             }
 
+            var currentToolBatchSignature = BuildToolBatchSignature(completion.ToolCalls);
+            if (string.Equals(currentToolBatchSignature, previousToolBatchSignature, StringComparison.Ordinal))
+            {
+                consecutiveIdenticalToolBatchCount++;
+                if (consecutiveIdenticalToolBatchCount >= maxConsecutiveIdenticalToolCallBatches)
+                {
+                    throw new InvalidOperationException(
+                        $"Detected repeated identical tool-call batches for {consecutiveIdenticalToolBatchCount} consecutive rounds. " +
+                        $"Stopping early to avoid an infinite loop. You can tune OpenRouter:MaxConsecutiveIdenticalToolCallBatches " +
+                        $"(current: {maxConsecutiveIdenticalToolCallBatches}) if needed.");
+                }
+            }
+            else
+            {
+                previousToolBatchSignature = currentToolBatchSignature;
+                consecutiveIdenticalToolBatchCount = 1;
+            }
+
             state.AddAssistantToolCallMessage(completion.ToolCalls, completion.Content);
 
             foreach (var toolCall in completion.ToolCalls)
@@ -103,7 +128,24 @@ public sealed class AgentService
             }
         }
 
-        throw new InvalidOperationException("Exceeded the maximum tool-calling rounds.");
+        throw new InvalidOperationException(
+            $"Exceeded the maximum tool-calling rounds ({maxToolRounds}). " +
+            "Increase OpenRouter:MaxToolRounds or adjust tool behavior/prompt to reduce loops.");
+    }
+
+    private static string BuildToolBatchSignature(IReadOnlyList<ChatToolCall> toolCalls)
+    {
+        var signatureBuilder = new StringBuilder();
+        for (var i = 0; i < toolCalls.Count; i++)
+        {
+            var toolCall = toolCalls[i];
+            signatureBuilder.Append(toolCall.Function.Name);
+            signatureBuilder.Append('\n');
+            signatureBuilder.Append(toolCall.Function.Arguments);
+            signatureBuilder.Append('\u001e');
+        }
+
+        return signatureBuilder.ToString();
     }
 
     private async Task<string> ExecuteToolCallSafelyAsync(ChatToolCall toolCall, CancellationToken cancellationToken)

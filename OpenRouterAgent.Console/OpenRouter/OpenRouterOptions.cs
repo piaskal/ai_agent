@@ -29,6 +29,10 @@ public sealed class OpenRouterOptions
 
     public int? MaxTokens { get; set; }
 
+    public int MaxToolRounds { get; set; } = 20;
+
+    public int MaxConsecutiveIdenticalToolCallBatches { get; set; } = 4;
+
     public string? AppName { get; set; } = "OpenRouterAgent.Console";
 
     public string? AppUrl { get; set; }
