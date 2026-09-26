@@ -2,16 +2,16 @@ using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 
 namespace OpenRouterAgent.ConsoleApp.Agent.Tools.Categorize;
-public interface IGetCargoDesriptions
+public interface IGetCargoDescriptions
 {
     Task<string> GetContent(CancellationToken cancellationToken);
 }
-public sealed class GetCargoDesriptions : IAgentTool, IGetCargoDesriptions
+public sealed class GetCargoDescriptions : IAgentTool, IGetCargoDescriptions
 {
     public const string ToolName = "get_cargo_descriptions";
     private readonly string _apiKey;
 
-    public GetCargoDesriptions(IOptions<AgentToolOptions> options)
+    public GetCargoDescriptions(IOptions<AgentToolOptions> options)
     {
         _apiKey = options.Value.ApiKey;
     }
