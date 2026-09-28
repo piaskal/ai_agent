@@ -22,9 +22,23 @@ using OpenRouterAgent.ConsoleApp.OpenRouter;
 using Serilog;
 using Serilog.Filters;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Windpower;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Phonecall;
 
 var isServeMode = args.Contains("--serve", StringComparer.OrdinalIgnoreCase);
-var configArgs = args.Where(a => !a.Equals("--serve", StringComparison.OrdinalIgnoreCase)).ToArray();
+var isPhonecall = args.Contains("--phonecall", StringComparer.OrdinalIgnoreCase);
+var isPhonecallSelfTest = args.Contains("--phonecall-selftest", StringComparer.OrdinalIgnoreCase);
+var configArgs = args.Where(a =>
+		!a.Equals("--serve", StringComparison.OrdinalIgnoreCase) &&
+		!a.Equals("--phonecall", StringComparison.OrdinalIgnoreCase) &&
+		!a.Equals("--phonecall-selftest", StringComparison.OrdinalIgnoreCase))
+	.ToArray();
+
+if (isPhonecallSelfTest)
+{
+	var passed = PhonecallDialogue.RunSelfTest(Console.Out);
+	Environment.ExitCode = passed ? 0 : 1;
+	return;
+}
 
 try
 {
@@ -129,13 +143,38 @@ try
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseResetTool>();
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseDatabaseTool>();
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseGetFood4CitiesTool>();
+	builder.Services.AddHttpClient<PhonecallApiClient>(client =>
+	{
+		client.Timeout = TimeSpan.FromSeconds(180);
+	});
+	builder.Services.AddHttpClient<PhonecallTranscriber>(client =>
+	{
+		client.Timeout = TimeSpan.FromSeconds(180);
+	});
+	builder.Services.AddSingleton<EdgeTtsSynthesizer>();
+	builder.Services.AddSingleton<PhonecallOrchestrator>();
+	builder.Services.AddSingleton<IAgentTool, PhonecallSolveTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
 
 	var app = builder.Build();
 
-	if (isServeMode)
+	if (isPhonecall)
+	{
+		try
+		{
+			var orchestrator = app.Services.GetRequiredService<PhonecallOrchestrator>();
+			var result = await orchestrator.RunAsync();
+			Console.WriteLine(result);
+		}
+		catch (Exception exception)
+		{
+			Console.Error.WriteLine(exception.Message);
+			Environment.ExitCode = 1;
+		}
+	}
+	else if (isServeMode)
 	{
 		app.MapGet("/", () => Results.Ok("OpenRouterAgent is running. Use POST /chat to interact with the agent."));
 		app.MapPost("/chat", async (ChatRequest req, AgentService agentService, CancellationToken ct) =>
