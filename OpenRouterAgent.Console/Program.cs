@@ -104,8 +104,8 @@ try
 	builder.Services.AddSingleton<IAgentTool, DescribeConnectionMapTool>();
 	builder.Services.AddSingleton<IAgentTool, RotateTileTool>();
 	builder.Services.AddSingleton<IAgentTool, VerifyDeclarationTool>();
-	builder.Services.AddSingleton<IAgentTool, GetCargoDesriptions>();
-	builder.Services.AddSingleton<IGetCargoDesriptions, GetCargoDesriptions>();
+	builder.Services.AddSingleton<IAgentTool, GetCargoDescriptions>();
+	builder.Services.AddSingleton<IGetCargoDescriptions, GetCargoDescriptions>();
 	builder.Services.AddSingleton<IAgentTool, CategorizeCargo>();
 	builder.Services.AddSingleton<IAgentTool, RailwayApiTool>();
 	builder.Services.AddSingleton<IAgentTool, ReactorApiTool>();

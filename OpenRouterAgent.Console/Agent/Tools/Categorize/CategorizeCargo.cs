@@ -10,8 +10,8 @@ public sealed class CategorizeCargo : IAgentTool
     public const string ToolName = "categorize_cargo";
     private readonly string _apiKey;
     private readonly ILogger<CategorizeCargo> _logger;
-    private readonly IGetCargoDesriptions _tool;
-    public CategorizeCargo(IOptions<AgentToolOptions> options, IGetCargoDesriptions tool, ILogger<CategorizeCargo> logger)
+    private readonly IGetCargoDescriptions _tool;
+    public CategorizeCargo(IOptions<AgentToolOptions> options, IGetCargoDescriptions tool, ILogger<CategorizeCargo> logger)
     {
         _apiKey = options.Value.ApiKey;
         _tool = tool;
@@ -42,7 +42,7 @@ public sealed class CategorizeCargo : IAgentTool
                     prompt = new
                     {
                         type = "string",
-                        description = "Model prompt to categorize cargo description. The prompt should contain instructions on how to categorize cargo. CAn not exceed 100 tokens"
+                        description = "Model prompt to categorize cargo description. The prompt should contain instructions on how to categorize cargo. Can not exceed 100 tokens"
                     },
                 },
                 required = new[] { "prompt" }
