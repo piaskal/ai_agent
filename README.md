@@ -137,6 +137,7 @@ Registered tool names you can use in `EnabledTools` / `DisabledTools`:
 - `get_cargo_descriptions`
 - `categorize_cargo`
 - `railway_api`
+- `phonecall_solve`
 
 Example:
 
@@ -213,6 +214,8 @@ The application currently supports these command-line arguments:
 | Argument | Value | Description |
 | --- | --- | --- |
 | `--serve` | none | Run as HTTP service instead of the interactive console |
+| `--phonecall` | none | Run the S05E02 phonecall solver and print the hub flag |
+| `--phonecall-selftest` | none | Check the phonecall dialogue rules without calling the hub |
 | `--model` | required | Override `OpenRouter:Model` |
 | `-m` | required | Short form of `--model` |
 | `--provider` | required | Override `OpenRouter:Provider` (`llmrouter` or `openrouter`) |
@@ -231,7 +234,18 @@ dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj --
 
 Notes:
 
-- `--serve` is removed from the configuration argument list before config binding and acts as a mode switch only.
+- `--serve`, `--phonecall`, and `--phonecall-selftest` are removed from the configuration argument list before config binding and act as mode switches only.
+
+## Phonecall (S05E02)
+
+The phonecall solver speaks to the OKO operator as Tymon Gajewski, asks which of RD224, RD472, and RD820 is passable for Zygfryd's transport, requests monitoring shutdown on that road, and gives the operator password when asked.
+
+It needs the `edge-tts` package (`pip install -r OpenRouterAgent.Console/Agent/Tools/Phonecall/requirements.txt`), `OPENROUTER__APIKEY` for transcription, and `AGENTTOOLS__APIKEY` for the hub.
+
+```powershell
+$env:DOTNET_ENVIRONMENT = "task22"
+dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --phonecall
+```
 - `--model` and `-m` both map to `OpenRouter:Model`.
 - `--provider` and `-p` both map to `OpenRouter:Provider`.
 
