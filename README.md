@@ -137,6 +137,7 @@ Registered tool names you can use in `EnabledTools` / `DisabledTools`:
 - `get_cargo_descriptions`
 - `categorize_cargo`
 - `railway_api`
+- `timetravel_solve`
 
 Example:
 
@@ -213,6 +214,8 @@ The application currently supports these command-line arguments:
 | Argument | Value | Description |
 | --- | --- | --- |
 | `--serve` | none | Run as HTTP service instead of the interactive console |
+| `--timetravel` | none | Run the S05E05 CHRONOS-P1 solver and print the flag |
+| `--timetravel-selftest` | none | Check sync ratio, protection, and stabilization parsing, then exit |
 | `--model` | required | Override `OpenRouter:Model` |
 | `-m` | required | Short form of `--model` |
 | `--provider` | required | Override `OpenRouter:Provider` (`llmrouter` or `openrouter`) |
@@ -231,7 +234,19 @@ dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj --
 
 Notes:
 
-- `--serve` is removed from the configuration argument list before config binding and acts as a mode switch only.
+- `--serve` and `--timetravel` are removed from the configuration argument list before config binding and act as mode switches only.
+- `--timetravel-selftest` exits before the host starts.
+
+## S05E05 timetravel
+
+`timetravel_solve` drives the CHRONOS-P1 device. It reads the protection table from the device documentation, sets `day`, `month`, `year`, `syncRatio`, and `stabilization` through `/verify`, and sets `PT-A`, `PT-B`, `PWR`, and `mode` through the preview backend. The sequence is a jump to 5 November 2238, a return to the device's current date, then a tunnel to 12 November 2024.
+
+```bash
+dotnet run --project OpenRouterAgent.Console/OpenRouterAgent.Console.csproj -- --timetravel-selftest
+DOTNET_ENVIRONMENT=task25 dotnet run --project OpenRouterAgent.Console/OpenRouterAgent.Console.csproj -- --timetravel
+```
+
+`AGENTTOOLS__APIKEY` is the hub key. `DOTNET_ENVIRONMENT=task25` selects `appsettings.task25.json`, which expects `OPENROUTER__APIKEY` because the host still validates a provider key.
 - `--model` and `-m` both map to `OpenRouter:Model`.
 - `--provider` and `-p` both map to `OpenRouter:Provider`.
 
