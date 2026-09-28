@@ -18,13 +18,24 @@ using OpenRouterAgent.ConsoleApp.Agent.Tools.RedirectPackage;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.SaveThem;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.OkoEditor;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.SPK;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Timetravel;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
 using Serilog;
 using Serilog.Filters;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Windpower;
 
+if (args.Contains("--timetravel-selftest", StringComparer.OrdinalIgnoreCase))
+{
+	TimetravelMath.RunSelfTest();
+	Console.WriteLine("timetravel self-test passed");
+	return;
+}
+
 var isServeMode = args.Contains("--serve", StringComparer.OrdinalIgnoreCase);
-var configArgs = args.Where(a => !a.Equals("--serve", StringComparison.OrdinalIgnoreCase)).ToArray();
+var isTimetravel = args.Contains("--timetravel", StringComparer.OrdinalIgnoreCase);
+var configArgs = args.Where(a =>
+	!a.Equals("--serve", StringComparison.OrdinalIgnoreCase) &&
+	!a.Equals("--timetravel", StringComparison.OrdinalIgnoreCase)).ToArray();
 
 try
 {
@@ -129,11 +140,27 @@ try
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseResetTool>();
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseDatabaseTool>();
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseGetFood4CitiesTool>();
+	builder.Services.AddHttpClient(TimetravelApiClient.HttpClientName, client =>
+	{
+		client.BaseAddress = new Uri("https://hub.ag3nts.org/");
+		client.Timeout = TimeSpan.FromSeconds(40);
+	});
+	builder.Services.AddSingleton<TimetravelApiClient>();
+	builder.Services.AddSingleton<TimetravelSolver>();
+	builder.Services.AddSingleton<IAgentTool, TimetravelSolveTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
 
 	var app = builder.Build();
+
+	if (isTimetravel)
+	{
+		var solver = app.Services.GetRequiredService<TimetravelSolver>();
+		var flag = await solver.SolveAsync();
+		Console.WriteLine(flag);
+		return;
+	}
 
 	if (isServeMode)
 	{
