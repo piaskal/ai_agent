@@ -137,6 +137,7 @@ Registered tool names you can use in `EnabledTools` / `DisabledTools`:
 - `get_cargo_descriptions`
 - `categorize_cargo`
 - `railway_api`
+- `goingthere_solve`
 
 Example:
 
@@ -213,6 +214,8 @@ The application currently supports these command-line arguments:
 | Argument | Value | Description |
 | --- | --- | --- |
 | `--serve` | none | Run as HTTP service instead of the interactive console |
+| `--goingthere` | none | Run the S05E04 goingthere solver and print the hub flag |
+| `--goingthere-selftest` | none | Check radio, scanner, and route parsing without calling the hub |
 | `--model` | required | Override `OpenRouter:Model` |
 | `-m` | required | Short form of `--model` |
 | `--provider` | required | Override `OpenRouter:Provider` (`llmrouter` or `openrouter`) |
@@ -227,13 +230,25 @@ dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj --
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --provider llmrouter
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- -p openrouter
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --serve --model "openai/gpt-5-mini" --provider llmrouter
+dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --goingthere-selftest
 ```
 
 Notes:
 
-- `--serve` is removed from the configuration argument list before config binding and acts as a mode switch only.
+- `--serve`, `--goingthere`, and `--goingthere-selftest` are removed from the configuration argument list before config binding and act as mode switches only.
 - `--model` and `-m` both map to `OpenRouter:Model`.
 - `--provider` and `-p` both map to `OpenRouter:Provider`.
+
+## Goingthere (S05E04)
+
+The goingthere solver flies a 3×12 rocket route. Before every move it reads the frequency scanner, repairs the jammed radar payload, and disarms an OKO lock with SHA1(detectionCode + "disarm"). The radio hint says whether the next column's rock is to port, straight ahead, or to starboard. The rocket also cannot cut across the rock in its current column, and it has to arrive on the base row in column 12.
+
+It needs `AGENTTOOLS__APIKEY`.
+
+```powershell
+$env:DOTNET_ENVIRONMENT = "task24"
+dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --goingthere
+```
 
 HTTP endpoints in serve mode:
 
