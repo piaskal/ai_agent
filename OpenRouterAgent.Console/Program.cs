@@ -22,9 +22,23 @@ using OpenRouterAgent.ConsoleApp.OpenRouter;
 using Serilog;
 using Serilog.Filters;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Windpower;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Goingthere;
 
 var isServeMode = args.Contains("--serve", StringComparer.OrdinalIgnoreCase);
-var configArgs = args.Where(a => !a.Equals("--serve", StringComparison.OrdinalIgnoreCase)).ToArray();
+var isGoingthere = args.Contains("--goingthere", StringComparer.OrdinalIgnoreCase);
+var isGoingthereSelfTest = args.Contains("--goingthere-selftest", StringComparer.OrdinalIgnoreCase);
+var configArgs = args.Where(a =>
+		!a.Equals("--serve", StringComparison.OrdinalIgnoreCase) &&
+		!a.Equals("--goingthere", StringComparison.OrdinalIgnoreCase) &&
+		!a.Equals("--goingthere-selftest", StringComparison.OrdinalIgnoreCase))
+	.ToArray();
+
+if (isGoingthereSelfTest)
+{
+	var passed = GoingthereSolver.RunSelfTest(Console.Out);
+	Environment.ExitCode = passed ? 0 : 1;
+	return;
+}
 
 try
 {
@@ -129,13 +143,33 @@ try
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseResetTool>();
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseDatabaseTool>();
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseGetFood4CitiesTool>();
+	builder.Services.AddHttpClient<GoingthereApiClient>(client =>
+	{
+		client.Timeout = TimeSpan.FromSeconds(40);
+	});
+	builder.Services.AddSingleton<GoingthereSolver>();
+	builder.Services.AddSingleton<IAgentTool, GoingthereSolveTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
 
 	var app = builder.Build();
 
-	if (isServeMode)
+	if (isGoingthere)
+	{
+		try
+		{
+			var solver = app.Services.GetRequiredService<GoingthereSolver>();
+			var result = await solver.RunAsync();
+			Console.WriteLine(result);
+		}
+		catch (Exception exception)
+		{
+			Console.Error.WriteLine(exception.Message);
+			Environment.ExitCode = 1;
+		}
+	}
+	else if (isServeMode)
 	{
 		app.MapGet("/", () => Results.Ok("OpenRouterAgent is running. Use POST /chat to interact with the agent."));
 		app.MapPost("/chat", async (ChatRequest req, AgentService agentService, CancellationToken ct) =>
