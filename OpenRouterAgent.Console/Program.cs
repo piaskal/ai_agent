@@ -22,9 +22,23 @@ using OpenRouterAgent.ConsoleApp.OpenRouter;
 using Serilog;
 using Serilog.Filters;
 using OpenRouterAgent.ConsoleApp.Agent.Tools.Windpower;
+using OpenRouterAgent.ConsoleApp.Agent.Tools.Radiomonitoring;
 
 var isServeMode = args.Contains("--serve", StringComparer.OrdinalIgnoreCase);
-var configArgs = args.Where(a => !a.Equals("--serve", StringComparison.OrdinalIgnoreCase)).ToArray();
+var isRadiomonitoring = args.Contains("--radiomonitoring", StringComparer.OrdinalIgnoreCase);
+var isRadiomonitoringSelfTest = args.Contains("--radiomonitoring-selftest", StringComparer.OrdinalIgnoreCase);
+var configArgs = args.Where(a =>
+		!a.Equals("--serve", StringComparison.OrdinalIgnoreCase) &&
+		!a.Equals("--radiomonitoring", StringComparison.OrdinalIgnoreCase) &&
+		!a.Equals("--radiomonitoring-selftest", StringComparison.OrdinalIgnoreCase))
+	.ToArray();
+
+if (isRadiomonitoringSelfTest)
+{
+	var passed = RadiomonitoringSelfTest.Run(Console.Out);
+	Environment.ExitCode = passed ? 0 : 1;
+	return;
+}
 
 try
 {
@@ -129,13 +143,29 @@ try
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseResetTool>();
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseDatabaseTool>();
 	builder.Services.AddSingleton<IAgentTool, FoodwarehouseGetFood4CitiesTool>();
+	builder.Services.AddHttpClient<RadiomonitoringApiClient>(client =>
+	{
+		client.Timeout = TimeSpan.FromSeconds(180);
+	});
+	builder.Services.AddSingleton<CaptureStore>();
+	builder.Services.AddSingleton<RadiomonitoringVisionClient>();
+	builder.Services.AddSingleton<CaptureAnalyzer>();
+	builder.Services.AddSingleton<ReportExtractor>();
+	builder.Services.AddSingleton<RadiomonitoringOrchestrator>();
+	builder.Services.AddSingleton<IAgentTool, RadiomonitoringSolveTool>();
 	builder.Services.AddSingleton<IAgentToolRegistry, BuiltInAgentToolRegistry>();
 	builder.Services.AddSingleton<AgentService>();
 	builder.Services.AddSingleton<ConsoleAgent>();
 
 	var app = builder.Build();
 
-	if (isServeMode)
+	if (isRadiomonitoring)
+	{
+		var orchestrator = app.Services.GetRequiredService<RadiomonitoringOrchestrator>();
+		var result = await orchestrator.RunAsync();
+		Console.WriteLine(result);
+	}
+	else if (isServeMode)
 	{
 		app.MapGet("/", () => Results.Ok("OpenRouterAgent is running. Use POST /chat to interact with the agent."));
 		app.MapPost("/chat", async (ChatRequest req, AgentService agentService, CancellationToken ct) =>
