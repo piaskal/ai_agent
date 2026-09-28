@@ -137,6 +137,7 @@ Registered tool names you can use in `EnabledTools` / `DisabledTools`:
 - `get_cargo_descriptions`
 - `categorize_cargo`
 - `railway_api`
+- `shellaccess_solve`
 
 Example:
 
@@ -213,6 +214,8 @@ The application currently supports these command-line arguments:
 | Argument | Value | Description |
 | --- | --- | --- |
 | `--serve` | none | Run as HTTP service instead of the interactive console |
+| `--shellaccess` | none | Run the S05E03 shellaccess solver and print the hub flag |
+| `--shellaccess-selftest` | none | Check archive parsing without calling the hub |
 | `--model` | required | Override `OpenRouter:Model` |
 | `-m` | required | Short form of `--model` |
 | `--provider` | required | Override `OpenRouter:Provider` (`llmrouter` or `openrouter`) |
@@ -227,13 +230,25 @@ dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj --
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --provider llmrouter
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- -p openrouter
 dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --serve --model "openai/gpt-5-mini" --provider llmrouter
+dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --shellaccess-selftest
 ```
 
 Notes:
 
-- `--serve` is removed from the configuration argument list before config binding and acts as a mode switch only.
+- `--serve`, `--shellaccess`, and `--shellaccess-selftest` are removed from the configuration argument list before config binding and act as mode switches only.
 - `--model` and `-m` both map to `OpenRouter:Model`.
 - `--provider` and `-p` both map to `OpenRouter:Provider`.
+
+## Shellaccess (S05E03)
+
+The shellaccess solver searches `/data` on the hub host. `time_logs.csv` records when a body was found, `locations.json` names the city, and `gps.json` holds the coordinates for that entry. The command printed back to the hub is the meeting point for the day before that discovery.
+
+It needs `AGENTTOOLS__APIKEY`.
+
+```powershell
+$env:DOTNET_ENVIRONMENT = "task23"
+dotnet run --project .\OpenRouterAgent.Console\OpenRouterAgent.Console.csproj -- --shellaccess
+```
 
 HTTP endpoints in serve mode:
 
