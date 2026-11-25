@@ -6,10 +6,6 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Processing;
-
 namespace OpenRouterAgent.ConsoleApp.Agent.Tools.Electricity;
 
 public sealed class DescribeImageTool : IAgentTool
