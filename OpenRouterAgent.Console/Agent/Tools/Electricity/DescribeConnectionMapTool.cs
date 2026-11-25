@@ -6,9 +6,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenRouterAgent.ConsoleApp.OpenRouter;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace OpenRouterAgent.ConsoleApp.Agent.Tools.Electricity;
 
@@ -16,8 +14,8 @@ public sealed class DescribeConnectionMapTool : IAgentTool
 {
     public const string ToolName = "describe_connection_map";
     private const int MaxRetries = 3;
-    private static readonly Rectangle CurrentMapCropArea = new(235, 95, 530 - 235, 390 - 95);
-    private static readonly Rectangle DesiredMapCropArea = new(137, 88, 431 - 137, 380 - 88);
+    private static readonly SKRectI CurrentMapCropArea = SKRectI.Create(235, 95, 530 - 235, 390 - 95);
+    private static readonly SKRectI DesiredMapCropArea = SKRectI.Create(137, 88, 431 - 137, 380 - 88);
 
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -230,22 +228,28 @@ public sealed class DescribeConnectionMapTool : IAgentTool
         return text.Length == 0 ? null : text;
     }
 
-    private static byte[] CropImageToConnectionArea(byte[] imageBytes, Rectangle cropArea)
+    private static byte[] CropImageToConnectionArea(byte[] imageBytes, SKRectI cropArea)
     {
-        using var sourceStream = new MemoryStream(imageBytes);
-        using var sourceImage = Image.Load(sourceStream);
+        using var sourceImage = SKBitmap.Decode(imageBytes)
+            ?? throw new InvalidOperationException("Failed to decode connection map image.");
 
-        var boundedCrop = Rectangle.Intersect(cropArea, new Rectangle(0, 0, sourceImage.Width, sourceImage.Height));
-        if (boundedCrop.Width <= 0 || boundedCrop.Height <= 0)
+        var imageBounds = SKRectI.Create(0, 0, sourceImage.Width, sourceImage.Height);
+        var boundedCrop = SKRectI.Intersect(cropArea, imageBounds);
+        if (boundedCrop.IsEmpty || boundedCrop.Width <= 0 || boundedCrop.Height <= 0)
         {
             throw new InvalidOperationException(
-                $"Configured crop area ({cropArea.X},{cropArea.Y})-({cropArea.Right},{cropArea.Bottom}) is outside source image bounds {sourceImage.Width}x{sourceImage.Height}.");
+                $"Configured crop area ({cropArea.Left},{cropArea.Top})-({cropArea.Right},{cropArea.Bottom}) is outside source image bounds {sourceImage.Width}x{sourceImage.Height}.");
         }
 
-        sourceImage.Mutate(context => context.Crop(boundedCrop));
-        using var outputStream = new MemoryStream();
-        sourceImage.Save(outputStream, PngFormat.Instance);
-        return outputStream.ToArray();
+        using var cropped = new SKBitmap(boundedCrop.Width, boundedCrop.Height);
+        if (!sourceImage.ExtractSubset(cropped, boundedCrop))
+        {
+            throw new InvalidOperationException("Failed to crop connection map image.");
+        }
+
+        using var encoded = cropped.Encode(SKEncodedImageFormat.Png, 100)
+            ?? throw new InvalidOperationException("Failed to encode cropped connection map image.");
+        return encoded.ToArray();
     }
 
     private async Task<HttpResponseMessage> SendWithRetryOn429Async(HttpClient httpClient, object request, CancellationToken cancellationToken)
